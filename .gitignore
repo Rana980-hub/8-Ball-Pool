@@ -4,3 +4,8 @@ storage/*.json
 .DS_Store
 storage/*.sqlite
 client/node_modules/
+
+# History scripts
+backdate_commits.ps1
+generate_full_history.ps1
+.dev_history
