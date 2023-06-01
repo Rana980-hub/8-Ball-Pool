@@ -38,7 +38,7 @@ class Ball {
         if (this.pocketed) return;
         const r = this.radius;
 
-        // Shadow
+        // --- SHADOW ---
         ctx.save();
         ctx.beginPath();
         ctx.ellipse(this.x + 3, this.y + 4, r * 0.9, r * 0.5, 0, 0, Math.PI * 2);
@@ -49,36 +49,54 @@ class Ball {
         ctx.save();
         ctx.translate(this.x, this.y);
 
-        // Base circle
-        ctx.beginPath();
-        ctx.arc(0, 0, r, 0, Math.PI * 2);
-
+        // --- BASE SPHERE GRADIENT ---
+        const sphereGrad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
+        
         if (this.isStripe) {
-            // White base
-            ctx.fillStyle = '#f5f5f5';
+            // Stripe Base (White with slight grey)
+            sphereGrad.addColorStop(0, '#ffffff');
+            sphereGrad.addColorStop(0.7, '#f0f0f0');
+            sphereGrad.addColorStop(1, '#d0d0d0');
+            ctx.beginPath();
+            ctx.arc(0, 0, r, 0, Math.PI * 2);
+            ctx.fillStyle = sphereGrad;
             ctx.fill();
-            // Stripe band
+
+            // The Stripe Band
             ctx.save();
-            ctx.clip();
-            ctx.fillStyle = this.color;
+            ctx.clip(); // Clip to the circle
+            const stripeGrad = ctx.createLinearGradient(0, -r, 0, r);
+            stripeGrad.addColorStop(0, darkenColor(this.color, 40));
+            stripeGrad.addColorStop(0.5, this.color);
+            stripeGrad.addColorStop(1, darkenColor(this.color, 40));
+            ctx.fillStyle = stripeGrad;
             ctx.fillRect(-r, -r * 0.45, r * 2, r * 0.9);
             ctx.restore();
         } else {
-            // Solid ball gradient
-            const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.05, 0, 0, r);
-            grad.addColorStop(0, lightenColor(this.color, 60));
-            grad.addColorStop(0.5, this.color);
-            grad.addColorStop(1, darkenColor(this.color, 50));
-            ctx.fillStyle = grad;
+            // Solid Ball
+            sphereGrad.addColorStop(0, lightenColor(this.color, 80));
+            sphereGrad.addColorStop(0.3, this.color);
+            sphereGrad.addColorStop(1, darkenColor(this.color, 60));
+            ctx.beginPath();
+            ctx.arc(0, 0, r, 0, Math.PI * 2);
+            ctx.fillStyle = sphereGrad;
             ctx.fill();
         }
 
-        // Number circle (white)
+        // --- NUMBER PLATE ---
         if (this.number !== 0) {
             ctx.beginPath();
             ctx.arc(0, 0, r * 0.42, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255,255,255,0.92)';
+            ctx.fillStyle = 'rgba(255,255,255,0.95)';
             ctx.fill();
+            
+            // Subtle inset shadow on number plate
+            ctx.beginPath();
+            ctx.arc(0, 0, r * 0.42, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
             // Number text
             ctx.fillStyle = '#111';
             ctx.font = `bold ${r * 0.55}px Orbitron, Arial`;
@@ -87,16 +105,20 @@ class Ball {
             ctx.fillText(this.number, 0, 0.5);
         }
 
-        // Shine highlight
+        // --- GLOSS HIGHLIGHTS ---
+        // Main Shine
+        const gloss = ctx.createRadialGradient(-r * 0.35, -r * 0.35, 0, -r * 0.35, -r * 0.35, r * 0.4);
+        gloss.addColorStop(0, 'rgba(255,255,255,0.7)');
+        gloss.addColorStop(1, 'rgba(255,255,255,0)');
         ctx.beginPath();
-        ctx.arc(-r * 0.28, -r * 0.32, r * 0.28, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.arc(-r * 0.35, -r * 0.35, r * 0.4, 0, Math.PI * 2);
+        ctx.fillStyle = gloss;
         ctx.fill();
 
-        // Outer ring
+        // Rim Light
         ctx.beginPath();
         ctx.arc(0, 0, r, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
         ctx.lineWidth = 1.5;
         ctx.stroke();
 

@@ -233,9 +233,87 @@ export class GameEngine {
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
-        this.ctx.fillStyle = 'rgba(0,0,0,0.15)';
-        this.ctx.fillRect(this.CUSHION, this.CUSHION, this.TABLE_WIDTH - this.CUSHION*2, this.TABLE_HEIGHT - this.CUSHION*2);
+        // --- DRAW TABLE OUTER FRAME (WOODEN RAILS) ---
+        const railWidth = this.CUSHION;
+        this.ctx.fillStyle = '#5c3010'; // Dark wood
+        this.ctx.fillRect(0, 0, this.TABLE_WIDTH, this.TABLE_HEIGHT);
         
+        // Bevel effect for rails
+        this.ctx.strokeStyle = '#3d1f0a';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(1, 1, this.TABLE_WIDTH - 2, this.TABLE_HEIGHT - 2);
+        
+        // Rail markers (Diamonds)
+        this.ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        for (let i = 1; i < 8; i++) {
+            // Horizontal markers
+            this.drawDiamond(i * (this.TABLE_WIDTH / 8), railWidth / 2);
+            this.drawDiamond(i * (this.TABLE_WIDTH / 8), this.TABLE_HEIGHT - railWidth / 2);
+        }
+        for (let i = 1; i < 4; i++) {
+            // Vertical markers
+            this.drawDiamond(railWidth / 2, i * (this.TABLE_HEIGHT / 4));
+            this.drawDiamond(this.TABLE_WIDTH - railWidth / 2, i * (this.TABLE_HEIGHT / 4));
+        }
+
+        // --- DRAW FELT (CLOTH) ---
+        const feltGrad = this.ctx.createRadialGradient(
+            this.TABLE_WIDTH / 2, this.TABLE_HEIGHT / 2, 50,
+            this.TABLE_WIDTH / 2, this.TABLE_HEIGHT / 2, 400
+        );
+        feltGrad.addColorStop(0, '#2e7d32'); // Bright green center
+        feltGrad.addColorStop(1, '#1b5e20'); // Darker green edges
+        
+        this.ctx.fillStyle = feltGrad;
+        this.ctx.fillRect(this.CUSHION, this.CUSHION, this.TABLE_WIDTH - this.CUSHION * 2, this.TABLE_HEIGHT - this.CUSHION * 2);
+
+        // Subtle Felt Texture (Noise)
+        this.ctx.globalAlpha = 0.05;
+        for (let i = 0; i < 1000; i++) {
+            const x = this.CUSHION + Math.random() * (this.TABLE_WIDTH - this.CUSHION * 2);
+            const y = this.CUSHION + Math.random() * (this.TABLE_HEIGHT - this.CUSHION * 2);
+            this.ctx.fillStyle = '#fff';
+            this.ctx.fillRect(x, y, 1, 1);
+        }
+        this.ctx.globalAlpha = 1.0;
+
+        // Inner cushion shadows
+        this.ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+        this.ctx.lineWidth = 4;
+        this.ctx.strokeRect(this.CUSHION, this.CUSHION, this.TABLE_WIDTH - this.CUSHION * 2, this.TABLE_HEIGHT - this.CUSHION * 2);
+
+        // --- DRAW POCKETS ---
+        this.POCKETS.forEach(p => {
+            // Outer pocket shadow
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, this.POCKET_RADIUS + 2, 0, Math.PI * 2);
+            this.ctx.fillStyle = '#111';
+            this.ctx.fill();
+            
+            // Inner pocket (hole)
+            const pGrad = this.ctx.createRadialGradient(p.x, p.y, 5, p.x, p.y, this.POCKET_RADIUS);
+            pGrad.addColorStop(0, '#000');
+            pGrad.addColorStop(1, '#222');
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, this.POCKET_RADIUS, 0, Math.PI * 2);
+            this.ctx.fillStyle = pGrad;
+            this.ctx.fill();
+            
+            // Pocket rim
+            this.ctx.strokeStyle = '#333';
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+        });
+
+        // Head string (D-line) - optional but nice
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.TABLE_WIDTH * 0.25, this.CUSHION);
+        this.ctx.lineTo(this.TABLE_WIDTH * 0.25, this.TABLE_HEIGHT - this.CUSHION);
+        this.ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        this.ctx.lineWidth = 1;
+        this.ctx.stroke();
+
+        // --- DRAW AIMING LINE & CUE ---
         if ((this.state === 'AIMING' || this.state === 'CHARGING') && this.cueBall && !this.cueBall.pocketed) {
             this.ctx.beginPath();
             this.ctx.moveTo(this.cueBall.x, this.cueBall.y);
@@ -265,13 +343,6 @@ export class GameEngine {
             this.ctx.stroke();
             this.ctx.restore();
         }
-        
-        this.POCKETS.forEach(p => {
-            this.ctx.beginPath();
-            this.ctx.arc(p.x, p.y, this.POCKET_RADIUS, 0, Math.PI * 2);
-            this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
-            this.ctx.fill();
-        });
 
         let visibleBalls = this.balls.filter(b => !b.pocketed).sort((a,b) => a.y - b.y);
         visibleBalls.forEach(b => b.draw(this.ctx));
@@ -384,6 +455,19 @@ export class GameEngine {
 
     getRemainingStripes() {
         return this.balls.filter(b => b.number >= 9 && b.number <= 15 && !b.pocketed).length;
+    }
+
+    drawDiamond(x, y) {
+        this.ctx.save();
+        this.ctx.translate(x, y);
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, -3);
+        this.ctx.lineTo(2, 0);
+        this.ctx.lineTo(0, 3);
+        this.ctx.lineTo(-2, 0);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.restore();
     }
 
     notifyStateUpdate() {
