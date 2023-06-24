@@ -313,16 +313,63 @@ export class GameEngine {
         this.ctx.lineWidth = 1;
         this.ctx.stroke();
 
-        // --- DRAW AIMING LINE & CUE ---
+        // --- DRAW AIMING LINE & TRAJECTORY PREDICTION ---
         if ((this.state === 'AIMING' || this.state === 'CHARGING') && this.cueBall && !this.cueBall.pocketed) {
+            const dx = Math.cos(this.aimAngle);
+            const dy = Math.sin(this.aimAngle);
+            
+            // Find first collision
+            let closestDist = 800; // Max table distance
+            let hitBall = null;
+
+            this.balls.forEach(b => {
+                if (b === this.cueBall || b.pocketed) return;
+                
+                // Ray-Circle intersection
+                const ocX = this.cueBall.x - b.x;
+                const ocY = this.cueBall.y - b.y;
+                const b_val = 2 * (ocX * dx + ocY * dy);
+                const c_val = (ocX * ocX + ocY * ocY) - (BALL_RADIUS * 2) * (BALL_RADIUS * 2);
+                const disc = b_val * b_val - 4 * c_val;
+
+                if (disc >= 0) {
+                    const t = (-b_val - Math.sqrt(disc)) / 2;
+                    if (t > 0 && t < closestDist) {
+                        closestDist = t;
+                        hitBall = b;
+                    }
+                }
+            });
+
+            // Draw line to collision or wall
             this.ctx.beginPath();
             this.ctx.moveTo(this.cueBall.x, this.cueBall.y);
-            this.ctx.lineTo(this.cueBall.x + Math.cos(this.aimAngle) * 500, this.cueBall.y + Math.sin(this.aimAngle) * 500);
+            const endX = this.cueBall.x + dx * closestDist;
+            const endY = this.cueBall.y + dy * closestDist;
+            this.ctx.lineTo(endX, endY);
             this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
             this.ctx.setLineDash([5, 5]);
             this.ctx.lineWidth = 2;
             this.ctx.stroke();
             this.ctx.setLineDash([]);
+
+            if (hitBall) {
+                // Ghost ball at impact point
+                this.ctx.beginPath();
+                this.ctx.arc(endX, endY, BALL_RADIUS, 0, Math.PI * 2);
+                this.ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                this.ctx.stroke();
+
+                // Target ball direction
+                const tx = hitBall.x - endX;
+                const ty = hitBall.y - endY;
+                const tDist = Math.sqrt(tx * tx + ty * ty);
+                this.ctx.beginPath();
+                this.ctx.moveTo(hitBall.x, hitBall.y);
+                this.ctx.lineTo(hitBall.x + (tx / tDist) * 100, hitBall.y + (ty / tDist) * 100);
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                this.ctx.stroke();
+            }
             
             const cueDistance = 20 + this.chargePower * 2;
             this.ctx.save();
