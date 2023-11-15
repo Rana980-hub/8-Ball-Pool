@@ -1,35 +1,53 @@
 <?php
 
+namespace App\Http\Controllers;
+
+use App\Models\Score;
+
 class GameController
 {
     public function index()
     {
-        include __DIR__ . '/../../resources/views/game.php';
+        // Define the content view to load inside the layout
+        $viewPath = __DIR__ . '/../../../resources/views/game.php';
+        
+        // Require the main layout which will include the $viewPath
+        require __DIR__ . '/../../../resources/views/layouts/app.php';
     }
 
     public function saveScore()
     {
         header('Content-Type: application/json');
+        
         $data = json_decode(file_get_contents('php://input'), true);
+        
         $score = isset($data['score']) ? (int)$data['score'] : 0;
         $player = isset($data['player']) ? htmlspecialchars($data['player']) : 'Player';
 
-        $file = __DIR__ . '/../../storage/scores.json';
-        $scores = file_exists($file) ? json_decode(file_get_contents($file), true) : [];
-        $scores[] = ['player' => $player, 'score' => $score, 'date' => date('Y-m-d H:i:s')];
-        usort($scores, fn($a, $b) => $b['score'] - $a['score']);
-        $scores = array_slice($scores, 0, 10);
-        
-        if (!is_dir(dirname($file))) mkdir(dirname($file), 0777, true);
-        file_put_contents($file, json_encode($scores));
-        echo json_encode(['success' => true, 'scores' => $scores]);
+        try {
+            if (Score::create($player, $score)) {
+                $topScores = Score::getTopScores(10);
+                echo json_encode(['success' => true, 'scores' => $topScores]);
+            } else {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'error' => 'Failed to insert score']);
+            }
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
     }
 
     public function getScores()
     {
         header('Content-Type: application/json');
-        $file = __DIR__ . '/../../storage/scores.json';
-        $scores = file_exists($file) ? json_decode(file_get_contents($file), true) : [];
-        echo json_encode($scores);
+        
+        try {
+            $scores = Score::getTopScores(10);
+            echo json_encode($scores);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
     }
 }
