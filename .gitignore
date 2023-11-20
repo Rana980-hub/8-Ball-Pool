@@ -3,3 +3,4 @@ storage/*.json
 .idea/
 .DS_Store
 storage/*.sqlite
+client/node_modules/
