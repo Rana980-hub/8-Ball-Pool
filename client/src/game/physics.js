@@ -260,5 +260,5 @@ function checkPocket(ball, pockets, pocketRadius) {
     return false;
 }
 
-export { Ball, CueBall, resolveCollision, wallBounce, checkPocket, BALL_RADIUS };
+export { Ball, CueBall, resolveCollision, wallBounce, checkPocket, BALL_RADIUS, FRICTION, MIN_SPEED };
 

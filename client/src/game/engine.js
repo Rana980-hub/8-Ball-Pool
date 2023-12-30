@@ -1,4 +1,4 @@
-import { Ball, CueBall, resolveCollision, wallBounce, checkPocket, BALL_RADIUS } from './physics.js';
+import { Ball, CueBall, resolveCollision, wallBounce, checkPocket, BALL_RADIUS, FRICTION, MIN_SPEED } from './physics.js';
 
 export class GameEngine {
     constructor(canvas, callbacks) {
@@ -189,38 +189,56 @@ export class GameEngine {
         }
 
         let isMoving = false;
+        const SUB_STEPS = 4; // Run physics multiple times per frame
 
-        for (let i = 0; i < this.balls.length; i++) {
-            const b = this.balls[i];
-            if (b.pocketed) continue;
-            b.update();
-            if (b.isMoving()) isMoving = true;
-            wallBounce(b, this.CUSHION, this.TABLE_WIDTH - this.CUSHION, this.CUSHION, this.TABLE_HEIGHT - this.CUSHION);
-        }
+        for (let s = 0; s < SUB_STEPS; s++) {
+            for (let i = 0; i < this.balls.length; i++) {
+                const b = this.balls[i];
+                if (b.pocketed) continue;
+                
+                // Update position by sub-step fraction
+                b.x += b.vx / SUB_STEPS;
+                b.y += b.vy / SUB_STEPS;
+                
+                // Apply friction gradually
+                b.vx *= Math.pow(FRICTION, 1 / SUB_STEPS);
+                b.vy *= Math.pow(FRICTION, 1 / SUB_STEPS);
+                
+                // Rotation
+                b.angle += Math.sqrt(b.vx * b.vx + b.vy * b.vy) * (0.1 / SUB_STEPS);
+                
+                if (Math.abs(b.vx) < MIN_SPEED) b.vx = 0;
+                if (Math.abs(b.vy) < MIN_SPEED) b.vy = 0;
 
-        for (let i = 0; i < this.balls.length; i++) {
-            for (let j = i + 1; j < this.balls.length; j++) {
-                const b1 = this.balls[i];
-                const b2 = this.balls[j];
-                if (b1.pocketed || b2.pocketed) continue;
-                if (resolveCollision(b1, b2)) {
-                    if (!this.firstHitBall && (b1 === this.cueBall || b2 === this.cueBall)) {
-                        this.firstHitBall = b1 === this.cueBall ? b2 : b1;
+                if (b.isMoving()) isMoving = true;
+                
+                wallBounce(b, this.CUSHION, this.TABLE_WIDTH - this.CUSHION, this.CUSHION, this.TABLE_HEIGHT - this.CUSHION);
+            }
+
+            for (let i = 0; i < this.balls.length; i++) {
+                for (let j = i + 1; j < this.balls.length; j++) {
+                    const b1 = this.balls[i];
+                    const b2 = this.balls[j];
+                    if (b1.pocketed || b2.pocketed) continue;
+                    if (resolveCollision(b1, b2)) {
+                        if (!this.firstHitBall && (b1 === this.cueBall || b2 === this.cueBall)) {
+                            this.firstHitBall = b1 === this.cueBall ? b2 : b1;
+                        }
                     }
                 }
             }
-        }
 
-        for (let i = 0; i < this.balls.length; i++) {
-            const b = this.balls[i];
-            if (b.pocketed) continue;
-            if (checkPocket(b, this.POCKETS, this.POCKET_RADIUS)) {
-                b.pocketed = true;
-                b.vx = 0; b.vy = 0;
-                if (b === this.cueBall) {
-                    this.cueBallPocketed = true;
-                } else {
-                    this.pocketedThisTurn.push(b);
+            for (let i = 0; i < this.balls.length; i++) {
+                const b = this.balls[i];
+                if (b.pocketed) continue;
+                if (checkPocket(b, this.POCKETS, this.POCKET_RADIUS)) {
+                    b.pocketed = true;
+                    b.vx = 0; b.vy = 0;
+                    if (b === this.cueBall) {
+                        this.cueBallPocketed = true;
+                    } else {
+                        this.pocketedThisTurn.push(b);
+                    }
                 }
             }
         }
